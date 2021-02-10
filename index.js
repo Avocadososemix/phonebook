@@ -1,28 +1,19 @@
 const express = require('express')
+const morgan = require('morgan')
 const app = express()
 
+morgan.token('details', function getDetails(req) {
+    return JSON.stringify(req.body)
+})
+
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :details'))
 app.use(express.json())
 
-// let persons = [
-//     {
-//         id: 1,
-//         content: "HTML is easy",
-//         date: "2020-01-10T17:30:31.098Z",
-//         important: true
-//     },
-//     {
-//         id: 2,
-//         content: "Browser can execute only Javascript",
-//         date: "2020-01-10T18:39:34.091Z",
-//         important: false
-//     },
-//     {
-//         id: 3,
-//         content: "GET and POST are the most important methods of HTTP protocol",
-//         date: "2020-01-10T19:20:14.298Z",
-//         important: true
-//     }
-// ]
+const randomValue = (min, max) => {
+    min = Math.ceil(min)
+    max = Math.floor(max)
+    return Math.floor(Math.random() * (max - min) + min)
+}
 
 let persons = [
     {
@@ -75,13 +66,15 @@ app.get('/api/persons/:id', (request, response) => {
 })
 
 const generateId = () => {
-    const maxId = persons.length > 0
-        ? Math.max(...persons.map(n => n.id))
-        : 0
-    return maxId + 1
+    // const maxId = persons.length > 0
+    //     ? Math.max(...persons.map(n => n.id))
+    //     : 0
+    // return maxId + 1
+    return randomValue(0, 99999999)
 }
 
 app.post('/api/persons', (request, response) => {
+    const requestString = JSON.stringify(request.body)
     const body = request.body
 
     if (!body.name) {
@@ -93,6 +86,12 @@ app.post('/api/persons', (request, response) => {
     if (!body.number) {
         return response.status(400).json({
             error: 'number missing'
+        })
+    }
+
+    if (persons.find(person => person.name === body.name)) {
+        return response.status(400).json({
+            error: 'name must be unique'
         })
     }
 
