@@ -12,6 +12,8 @@ morgan.token('details', function getDetails(req) {
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :details'))
 app.use(express.json())
 
+app.use(express.static('build'))
+
 const randomValue = (min, max) => {
     min = Math.ceil(min)
     max = Math.floor(max)
