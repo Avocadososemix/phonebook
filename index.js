@@ -62,12 +62,11 @@ app.get('/', (req, res) => {
     res.send('<h1>Hello World!</h1>')
 })
 
-app.get('/info', (req, res) => {
-    const peopleCount = persons.length
-    const line1 = `<p>Phonebook has info for ${peopleCount} people</p>`
-    const line2 = `${Date(Date.now())}`
-    console.log(line1)
-    res.send(line1.concat(line2))
+app.get('/info', (request, response) => {
+    Person.find({}).then(persons => {
+        const html = `<p>Phonebook has info for ${persons.length} people</p><p>${new Date()}</p>`
+        response.send(html)
+    })
 })
 
 
@@ -83,17 +82,17 @@ app.get('/api/persons', (req, res, next) => {
 })
 
 app.get('/api/persons/:id', (request, response, next) => {
-    Person.findById(request.params.id).then(person => {
-        if (person) {
-            response.json(person)
-        } else {
-            response.status(404).end()
-        }
-    })
+    console.log("params id", request.params.id)
+    Person.findById(request.params.id)
+        .then(person => {
+            if (person) {
+                response.json(person)
+            } else {
+                response.status(404).end()
+            }
+        })
         .catch(error => {
             next(error)
-            console.log(error)
-            response.status(400).send({ error: 'malformatted id' })
         })
 })
 
@@ -105,43 +104,44 @@ const generateId = () => {
     return randomValue(0, 99999999)
 }
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
     const body = request.body
+    if (body.name === undefined) {
+        return response.status(400).json({ error: 'name missing' })
+    }
 
     const person = new Person({
         name: body.name,
         number: body.number,
         id: generateId(),
     })
-    person.save().then(savedPerson => {
-        response.json(savedPerson)
-    })
+    person
+    .save()
+    .then(savedPerson => savedPerson.toJSON())
+    .then(savedAndFormattedPerson => {
+      response.json(savedAndFormattedPerson)
+    }) 
         .catch(error => {
             next(error)
             console.log(error)
             if (!body.name) {
-                response.status(400).send({ error: 'missing name' })
+                return response.status(400).send({ error: 'missing name' })
             }
             if (!body.number) {
-                response.status(400).send({ error: 'missing number' })
+                return response.status(400).send({ error: 'missing number' })
             }
             if (persons.find(person => person.name === body.name)) {
-                response.status(400).send({ error: 'name must be unique' })
+                return response.status(400).send({ error: 'name must be unique' })
             }
         })
 })
 
 app.put('/api/persons/:id', (request, response, next) => {
-    console.log("hei ", request.params.id)
-    const body = request.body
-    const person = {
-        name: body.name,
-        number: body.number
-    }
-    Person.findByIdAndUpdate(request.params.id, person, { new: true }, next)
+    const { name, number } = request.body
+    const person = { name, number }
+
+    Person.findByIdAndUpdate(request.params.id, person, { new: true })
         .then(updatedPerson => {
-            console.log('body', body)
-            console.log('updatedPerson ', updatedPerson)
             response.json(updatedPerson)
         })
         .catch(error => {
@@ -175,6 +175,8 @@ const errorHandler = (error, request, response, next) => {
 
     if (error.name === 'CastError') {
         return response.status(400).send({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {
+        return response.status(400).json({ error: error.message })
     }
 
     next(error)
