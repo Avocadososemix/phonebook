@@ -116,11 +116,11 @@ app.post('/api/persons', (request, response, next) => {
         id: generateId(),
     })
     person
-    .save()
-    .then(savedPerson => savedPerson.toJSON())
-    .then(savedAndFormattedPerson => {
-      response.json(savedAndFormattedPerson)
-    }) 
+        .save()
+        .then(savedPerson => savedPerson.toJSON())
+        .then(savedAndFormattedPerson => {
+            response.json(savedAndFormattedPerson)
+        })
         .catch(error => {
             next(error)
             console.log(error)
